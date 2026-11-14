@@ -1,0 +1,56 @@
+name: atlantis
+
+services:
+  # Backend de state "local" com lock nativo (advisory locks do Postgres).
+  # Na AWS o equivalente é S3 + use_lockfile.
+  tfstate-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tfstate
+      POSTGRES_USER: terraform
+      POSTGRES_PASSWORD: ${TFSTATE_DB_PASSWORD:?defina no .env}
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - tfstate-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U terraform -d tfstate"]
+      interval: 5s
+      retries: 10
+
+  atlantis:
+    build: .
+    image: local/atlantis:v0.49.0-kind
+    restart: unless-stopped
+    # host network: o Atlantis alcança a API dos clusters kind em 127.0.0.1:<porta>
+    # e o Postgres em 127.0.0.1:15432, exatamente como você no terminal.
+    network_mode: host
+    depends_on:
+      tfstate-db:
+        condition: service_healthy
+    group_add:
+      - "${DOCKER_GID:?rode: stat -c %g /var/run/docker.sock}"
+    env_file: .env
+    environment:
+      ATLANTIS_PORT: "4141"
+      ATLANTIS_DATA_DIR: /atlantis-data
+      ATLANTIS_REPO_CONFIG: /config/repos.yaml
+      ATLANTIS_DEFAULT_TF_VERSION: "1.17.2"
+      ATLANTIS_ENABLE_POLICY_CHECKS: "true"
+      ATLANTIS_CHECKOUT_STRATEGY: merge
+      ATLANTIS_HIDE_PREV_PLAN_COMMENTS: "true"
+      ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT: "true"
+      ATLANTIS_EMOJI_REACTION: eyes
+      ATLANTIS_AUTOPLAN_MODULES: "true"
+      PG_CONN_STR: postgres://terraform:${TFSTATE_DB_PASSWORD}@127.0.0.1:15432/tfstate?sslmode=disable
+    volumes:
+      - atlantis-data:/atlantis-data
+      - ./config:/config:ro
+      - ./policies:/policies:ro
+      - ./secrets/aws:/home/atlantis/.aws:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  tfstate-db:
+  atlantis-data:

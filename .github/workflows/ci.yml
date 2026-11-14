@@ -1,0 +1,22 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  policies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: conftest verify (testes unitários das políticas OPA)
+        run: docker run --rm -v "$PWD/policies:/policies" --entrypoint conftest ghcr.io/runatlantis/atlantis:v0.49.0 verify -p /policies/terraform
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t atlantis-test .
+      - run: docker run --rm --entrypoint docker atlantis-test --version
+      - name: compose config
+        run: cp .env.example .env && docker compose config -q

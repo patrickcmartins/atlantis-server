@@ -1,0 +1,5 @@
+.env
+secrets/*
+!secrets/aws/
+secrets/aws/*
+!secrets/aws/*.example

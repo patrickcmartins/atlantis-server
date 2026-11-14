@@ -1,0 +1,47 @@
+# Server-side repo config: as regras são do TIME DE PLATAFORMA, não do repo.
+# O infra-live só escolhe entre workflows pré-aprovados; não consegue injetar comandos.
+repos:
+  - id: github.com/patrickcmartins/infra-live
+    branch: /^main$/
+
+    # Em empresa: [approved, mergeable, undiverged]. Aqui não tem "approved" porque
+    # você é o único dev (o GitHub não deixa aprovar o próprio PR).
+    apply_requirements: [mergeable, undiverged]
+    import_requirements: [mergeable, undiverged]
+
+    allowed_overrides: [workflow]
+    allowed_workflows: [local, aws]
+    allow_custom_workflows: false
+
+    delete_source_branch_on_merge: true
+    repo_locks:
+      mode: on_plan
+    policy_check: true
+
+workflows:
+  # Stacks locais (kind): state no Postgres via PG_CONN_STR.
+  local:
+    plan:
+      steps: [init, plan]
+    apply:
+      steps: [apply]
+
+  # Stacks AWS: credencial temporária via assume-role.
+  aws:
+    plan:
+      steps:
+        - env: { name: AWS_PROFILE, value: lab-deployer }
+        - init
+        - plan
+    apply:
+      steps:
+        - env: { name: AWS_PROFILE, value: lab-deployer }
+        - apply
+
+policies:
+  owners:
+    users: [patrickcmartins]
+  policy_sets:
+    - name: guardrails
+      path: /policies/terraform
+      source: local
