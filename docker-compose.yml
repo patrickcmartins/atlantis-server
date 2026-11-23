@@ -46,11 +46,14 @@ services:
       PG_CONN_STR: postgres://terraform:${TFSTATE_DB_PASSWORD}@127.0.0.1:15432/tfstate?sslmode=disable
       # Provider github (infra-live/github): environments e rulesets. Vazio = o plan desse projeto falha.
       GITHUB_TOKEN: ${GITHUB_ADMIN_TOKEN:-}
+      AWS_CONFIG_FILE: /etc/aws-secrets/config
+      AWS_SHARED_CREDENTIALS_FILE: /etc/aws-secrets/credentials
     volumes:
       - atlantis-data:/atlantis-data
       - ./config:/config:ro
       - ./policies:/policies:ro
-      - ./secrets/aws:/home/atlantis/.aws:ro
+      # Segredos read-only FORA do ~/.aws: o aws-cli precisa gravar cache em ~/.aws/cli/cache.
+      - ./secrets/aws:/etc/aws-secrets:ro
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
