@@ -43,6 +43,10 @@ services:
       ATLANTIS_ENABLE_DIFF_MARKDOWN_FORMAT: "true"
       ATLANTIS_EMOJI_REACTION: eyes
       ATLANTIS_AUTOPLAN_MODULES: "true"
+      # O ruleset da main exige o check atlantis/apply. Sem isto: "PR must be mergeable"
+      # (falta o atlantis/apply) x "só aplico se mergeable" = deadlock. Com isto o Atlantis
+      # ignora SÓ o próprio check de apply ao avaliar mergeable; os demais continuam obrigatórios.
+      ATLANTIS_GH_ALLOW_MERGEABLE_BYPASS_APPLY: "true"
       PG_CONN_STR: postgres://terraform:${TFSTATE_DB_PASSWORD}@127.0.0.1:15432/tfstate?sslmode=disable
       # Provider github (infra-live/github): environments e rulesets. Vazio = o plan desse projeto falha.
       GITHUB_TOKEN: ${GITHUB_ADMIN_TOKEN:-}
