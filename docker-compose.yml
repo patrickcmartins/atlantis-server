@@ -44,6 +44,8 @@ services:
       ATLANTIS_EMOJI_REACTION: eyes
       ATLANTIS_AUTOPLAN_MODULES: "true"
       PG_CONN_STR: postgres://terraform:${TFSTATE_DB_PASSWORD}@127.0.0.1:15432/tfstate?sslmode=disable
+      # Provider github (infra-live/github): environments e rulesets. Vazio = o plan desse projeto falha.
+      GITHUB_TOKEN: ${GITHUB_ADMIN_TOKEN:-}
     volumes:
       - atlantis-data:/atlantis-data
       - ./config:/config:ro
